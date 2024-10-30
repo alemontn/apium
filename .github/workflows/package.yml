@@ -27,6 +27,8 @@ jobs:
           cat head.in common.sh.in args.in ext/*.sh apium.sh > apium
           chmod +x apium
           sudo install -m755 ./apium /usr/bin/apium
+          sudo mkdir /etc/apium.d
+          cat "APIUM_ROOT=/app" | sudo tee /etc/apium.d/root.conf
 
       - name: package apium
         run: |
