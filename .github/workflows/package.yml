@@ -9,6 +9,7 @@ on:
       - head.in
       - ext/**
       - pkg/apm/**
+  workflow_dispatch:
 
 jobs:
   build:
