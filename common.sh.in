@@ -1,0 +1,215 @@
+# colours & formatting :o
+red=$(echo -ne '\e[1;31m')
+none=$(echo -ne '\e[0m')
+bold=$(echo -ne '\e[1m')
+
+# exit on errors
+set -o "errexit"
+
+# base script name
+sysName="${0##*'/'}" sysName="${sysName%'.sh'}"
+
+# required arrays for exts
+declare -A extExec
+declare -A extHelp
+declare -A extTargets
+declare -A extTargetsOpt
+# for arguments
+declare -A shortArgs
+declare -A longArgs
+declare -A argsHelp
+
+function sudoEsculate()
+{
+  if [ ! "$SUDO_AUTHORISED" == true ]
+  then
+    # warn user beforing trying to authenticate
+    if ! sudo 2>/dev/null -n true
+    then
+      warn "elevated privileges are required for this operation"
+    fi
+    sudo true && SUDO_AUTHORISED=true
+  fi
+}
+
+function makeTmp()
+{
+  id="$1"
+  tmpfile="$(mktemp /tmp/apium-$id-XXXXXXX)"
+  CLEAN+=("$tmpfile")
+}
+
+function cleanup()
+{
+  for rm in "${CLEAN[@]}"
+  do
+    if [ -w "$rm" ]
+    then
+      rm -rf "$rm"
+    else
+      sudo rm -rf "$rm" || warn "cleanup:" "$rm:" "failed to remove file"
+    fi
+  done
+}
+trap "cleanup" EXIT
+
+function fatal()
+{
+  cleanup
+  echo "$sysName:" $red"error:"$none "$@"
+  # exit with failure
+  exit 1
+}
+
+function warn()
+{
+  echo "$sysName:" $red"warning:"$none "$@"
+}
+
+function extmeta()
+{
+  ename="$1"
+  help="$2"
+  targets="$3"
+  exec="$4"
+
+  if [ -z "$exec" ]
+  then
+    exec="$ename"
+  fi
+
+  # add the base extension
+  exts+=("$ename")
+
+  # add our required data
+  extExec["$ename"]="$exec"
+  extHelp["$ename"]="$help"
+
+  case "$targets" in
+    "targets"|"targets-opt")
+      extTargets["$ename"]=true
+      ;;
+    "notargets")
+      extTargets["$ename"]=false
+      ;;
+  esac
+
+  # if targets are optional or nah
+  if [[ "$targets" == *"-opt" ]]
+  then
+    extTargetsOpt["$ename"]=true
+  else
+    extTargetsOpt["$ename"]=false
+  fi
+
+  # unset these in case of conflicts
+  unset ename \
+        help \
+        targets \
+        exec
+}
+
+function appExists()
+{
+  [ -f "$APIUM_ROOT/.appdata/$1/meta" ] && [ -d "$APIUM_ROOT/$1" ]
+}
+
+function appExistsGlobal()
+(
+  . "/etc/apium.d/root.conf"
+  appExists
+)
+
+function ext()
+{
+  help="${extHelp[$ext]}"
+  exec="${extExec[$ext]}"
+  takeTargets="${extTargets[$ext]}"
+  targetOpt="${extTargetsOpt[$ext]}"
+}
+
+function addArg()
+{
+  variable="$1"
+  shortArg="$2"
+  longArg="$3"
+  help="$4"
+
+  args+=("$variable")
+  longArgs["$variable"]="$longArg"
+  shortArgs["$variable"]="$shortArg"
+  argsHelp["$variable"]="$help"
+}
+
+function addTarget()
+{
+  if [ -f "$1" ]
+  then
+    fnTargets+=("$(realpath -eL "$1")")
+  else
+    fnTargets+=("$1")
+  fi
+}
+
+function matchExt()
+{
+  match="$1"
+
+  for ext in "${exts[@]}"
+  do
+    ext
+
+    if [ "$ext" == "$match" ]
+    then
+      ret=0
+      export ext
+      break
+    else
+      unset ext
+      ret=1
+    fi
+  done
+
+  return $ret
+}
+
+function matchArg()
+{
+  match="$1"
+
+  for arg in "${args[@]}"
+  do
+    shortArg="${shortArgs[$arg]}"
+    longArg="${longArgs[$arg]}"
+
+    case "$match" in
+      "$shortArg"|"$longArg")
+        ret=0
+        export arg
+        eval export "$arg"=true
+        break
+        ;;
+      *)
+        ret=1
+        ;;
+    esac
+  done
+
+  return $ret
+}
+
+if [ $EUID -eq 0 ]
+then
+  # sudo is not needed
+  function sudo()
+  {
+    eval "$@"
+  }
+fi
+
+if tar --version | head -n1 | grep -q "tar (GNU tar)"
+then
+  GNU_TAR=true
+fi
+
+COMMON_SOURCED=true

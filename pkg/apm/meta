@@ -1,0 +1,8 @@
+name="apium"
+version=0.0.1
+description="a containerised app manager"
+arch="all"
+depends=("coreutils" "binutils" "bash")
+license="GPL-3.0"
+maintainer="alemontn <https://github.com/alemontn>"
+user=false

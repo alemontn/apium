@@ -1,0 +1,2 @@
+addArg "VERBOSE" "-v" "--verbose" "don't suppress extra info"
+addArg "FAKE_ROOT" "" "--root" "run operations in a fake root environment"
