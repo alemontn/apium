@@ -1,0 +1,41 @@
+name: package
+
+on:
+  push:
+    paths:
+      - apium.sh
+      - common.sh.in
+      - args.in
+      - head.in
+      - ext/**
+      - pkg/apm/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clone repo
+        uses: actions/checkout@v3
+        with:
+          repository: alemontn/apium
+          path: /home/runner/work/apium/apium
+
+      - name: make apium
+        run: |
+          cd ~/work/apium/apium
+          cat head.in common.sh.in args.in ext/*.sh apium.sh > apium
+          chmod +x apium
+          sudo install -m755 ./apium /usr/bin/apium
+
+      - name: package apium
+        run: |
+          cd ~/work/apium/apium/pkg
+          mkdir ~/out
+          apium -v package
+          mv out/*.apm ~/out
+
+      - name: upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: out
+          path: ~/out
