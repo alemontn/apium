@@ -13,11 +13,11 @@ function rmlink()
 
   cd "$APIUM_ROOT/$appname"
 
-  for file in "$(<"$APIUM_ROOT/.appdata/$appname/links")"
+  while read file
   do
-    rm -f "$file"
-    sed -i "s|$file||" "$APIUM_ROOT/.appdata/$appname/links"
-  done
+    rm -f "$file" && sed -i "s|$file||" "$APIUM_ROOT/.appdata/$appname/links"
+  done \
+   <"$APIUM_ROOT/.appdata/$appname/links"
 
   if [ -n "$(<$APIUM_ROOT/.appdata/$appname/links)" ]
   then

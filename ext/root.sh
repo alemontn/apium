@@ -24,6 +24,7 @@ then
       then
         confDir="/etc/apium.d"
       fi
+      cacheDir="/var/cache/apium"
       . /etc/apium.d/root.conf
       ;;
     *)
@@ -31,9 +32,17 @@ then
       then
         confDir="$HOME/.config/apium"
       fi
+      cacheDir="$HOME/.cache/apium"
       ;;
   esac
   . "$confDir/root.conf"
+fi
+
+mkdir -pm0755 "$cacheDir"
+
+if [ ! -d "$cacheDir" ]
+then
+  fatal "$cacheDir:" "cannot access cache directory"
 fi
 
 if [ ! -d "$APIUM_ROOT" ]

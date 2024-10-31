@@ -23,18 +23,16 @@ function main()
   if matchExt "$1"
   then
     shift
-    if [ "$takeTargets" == true ]
-    then
-      while [ $# -ne 0 ]
-      do
-        if [[ "$1" == "-"* ]]
-        then
-          matchArg "$1" && continue || true
-        fi
-        addTarget "$1"
+    while [ $# -ne 0 ]
+    do
+      if [[ "$1" == "-"* ]] && matchArg "$1"
+      then
         shift
-      done
-    fi
+        continue
+      fi
+      addTarget "$1"
+      shift
+    done
   elif [[ "$1" == "-"* ]]
   then
     if ! matchArg "$1"
@@ -62,14 +60,16 @@ main "$@"
 
 if [ "$VERBOSE" == true ]
 then
+  debugStd=/dev/stdout
   function debug()
   {
     echo >&2 "$sysName:" "$@"
   }
 else
+  debugStd=/dev/null
   function debug()
   {
-    return 0
+    return $?
   }
 fi
 
