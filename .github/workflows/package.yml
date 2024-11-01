@@ -6,8 +6,10 @@ on:
       - common.sh.in
       - args.in
       - head.in
-      - ext/**
+      - operations/**
+      - lib/**
       - pkg/apm/**
+      - .github/workflows/package.yml
   workflow_dispatch:
 
 jobs:
@@ -23,9 +25,9 @@ jobs:
       - name: make apium
         run: |
           cd ~/work/apium/apium
-          cat head.in common.sh.in args.in ext/*.sh apium.sh > apium
+          cat head.in common.sh.in args.in lib/*.sh operations/*.sh apium.sh > apium
           chmod +x apium
-          sudo install -m755 ./apium /usr/bin/apium
+          sudo install -m0755 ./apium /usr/bin/apium
           mkdir ~/.config/apium
           echo "APIUM_ROOT=~/.local/app" >~/.config/apium/root.conf
 
