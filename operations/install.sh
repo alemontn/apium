@@ -153,8 +153,10 @@ function updateApp()
     fatal "$latest:" "specified latest version is not available"
   fi
 
-  if [ ! "$latest" == "$version" ]
+  if [ "$latest" == "$version" ]
   then
+    echo "$name:" "app is up-to-date"
+  else
     makeTmp "$name-update-$latest"
     # save our package
     curl -Lso "$tmpfile" "${pkgrelease[$latest]}"

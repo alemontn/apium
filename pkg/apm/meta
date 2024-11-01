@@ -1,5 +1,5 @@
 name="apium"
-version=0.0.1
+version=0.0.2
 description="a containerised app manager"
 arch="all"
 depends=("coreutils" "binutils" "bash")
