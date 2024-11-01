@@ -1,3 +1,4 @@
+versions=("0.0.1")
 pkgrelease=(
   ["0.0.1"]="https://github.com/alemontn/apium/releases/download/pre/apium-0.0.1-all.apm"
 )

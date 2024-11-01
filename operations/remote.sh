@@ -2,9 +2,6 @@
 # remote.sh - interface for downloading/updating apps
 #
 
-# the main array for the remote
-declare -A pkgrelease
-
 extmeta "remote-list" "list installed remotes" "notargets" "remoteList"
 extmeta "remote-update" "refresh remotes" "notargets" "remoteUpdate"
 
@@ -70,6 +67,8 @@ function remoteUpdate()
     unset id \
           baseurl \
           content
+
+    REMOTE_UPDATED=true
   done
 }
 

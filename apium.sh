@@ -4,7 +4,7 @@ then
   exit 1
 fi
 
-function main()
+function argParse()
 {
   if [ $# -eq 0 ]
   then
@@ -56,7 +56,67 @@ function main()
     fatal "must provide at least one operation (try '$sysName help')"
   fi
 }
-main "$@"
+
+function main()
+{
+  if [ -z "$APIUM_ROOT" ]
+  then
+    case $EUID in
+      0)
+        if [ -f "/etc/apium.d/root.conf" ]
+        then
+          confDir="/etc/apium.d"
+        fi
+        cacheDir="/var/cache/apium"
+        . /etc/apium.d/root.conf
+        ;;
+      *)
+        if [ -f "$HOME/.config/apium/root.conf" ]
+        then
+          confDir="$HOME/.config/apium"
+        fi
+        cacheDir="$HOME/.cache/apium"
+        ;;
+    esac
+
+    if [ ! "$FAKE_ROOT" == true ]
+    then
+      . "$confDir/root.conf"
+    fi
+  fi
+
+  if [ "$FAKE_ROOT" == true ]
+  then
+    confDir="/etc/apium.d"
+    . "$confDir/root.conf"
+  fi
+
+  mkdir -pm0755 "$cacheDir"
+
+  if [ ! -d "$cacheDir" ]
+  then
+    fatal "$cacheDir:" "cannot access cache directory"
+  fi
+
+  if [ ! -d "$APIUM_ROOT" ]
+  then
+    if [ ! "$FAKE_ROOT" == true ]
+    then
+      mkdir "$APIUM_ROOT"
+    fi
+    warn "failed to locate apium root"
+  fi
+
+  if ! ls &>/dev/null -d "$APIUM_ROOT/.appdata/"*"/meta"
+  then
+    APP_TOTAL=0
+  else
+    APP_TOTAL=$(ls -1 -d "$APIUM_ROOT/.appdata/"*"/meta" | wc -l)
+  fi
+}
+
+argParse "$@"
+main
 
 if [ "$VERBOSE" == true ]
 then
@@ -71,11 +131,6 @@ else
   {
     return $?
   }
-fi
-
-if [ "$FAKE_ROOT" == true ]
-then
-  . "/etc/apium.d/root.conf"
 fi
 
 eval "${extExec[$ext]}" "${fnTargets[@]}"

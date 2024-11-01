@@ -18,6 +18,9 @@ declare -A extTargetsOpt
 declare -A shortArgs
 declare -A longArgs
 declare -A argsHelp
+# arrays for remotes
+declare -A pkgrelease
+declare -a versions
 
 function sudoEsculate()
 {
@@ -56,14 +59,55 @@ trap "cleanup" EXIT
 function fatal()
 {
   cleanup
-  echo "$sysName:" $red"error:"$none "$@"
+  echo >&2 "$sysName:" $red"error:"$none "$@"
   # exit with failure
   exit 1
 }
 
 function warn()
 {
-  echo "$sysName:" $red"warning:"$none "$@"
+  echo >&2 "$sysName:" $red"warning:"$none "$@"
+}
+
+function ask()
+{
+  # return error by default
+  ret=1
+
+  ynPrompt="Yn"
+  if [ "$1" == "--no" ]
+  then
+    ynPref="$1"
+    ynPrompt="yN"
+    shift
+  fi
+
+  echo >&2 -n "$@ ($ynPrompt) "
+  read yn
+
+  if [ -z "$yn" ]
+  then
+    # take the uppercase letter only (the default)
+    yn="${ynPrompt/[a-z]}"
+  fi
+
+  # make all letters lowercase
+  yn="${yn,,}"
+
+  case "$yn" in
+    "yes"|"y")
+      ret=0
+      return $ret
+      ;;
+    "no"|"n")
+      exit $ret
+      ;;
+    *)
+      warn "$yn:" "invalid answer provided"
+      # ask again
+      ask $ynPref "$@"
+      ;;
+  esac
 }
 
 function extmeta()
@@ -119,6 +163,23 @@ function appExistsGlobal()
   . "/etc/apium.d/root.conf"
   appExists
 )
+
+function validPkg()
+{
+  ret=0
+
+  if [ ! "$(head -c3 "$1" | od -A 'n' -t 'x1')" == " 61 70 6d" ]
+  then
+    ret=1
+  fi
+
+  if ! tail -c+4 "$1" | unzstd | tar &>/dev/null -t
+  then
+    ret=1
+  fi
+
+  return $ret
+}
 
 function ext()
 {
@@ -207,7 +268,7 @@ then
   }
 fi
 
-if tar --version | head -n1 | grep -q "tar (GNU tar)"
+if tar --version | head -n1 | grep -qF "tar (GNU tar)"
 then
   GNU_TAR=true
 fi

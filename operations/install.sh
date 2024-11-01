@@ -3,7 +3,7 @@
 #
 
 extmeta "install" "install an app" "targets" "addPkg"
-extmeta "update" "update apps" "targets" "updatePkg"
+extmeta "update" "update apps" "targets-opt" "updatePkg"
 extmeta "uninstall" "uninstall an app" "targets" "uninstallPkg"
 
 function installApp()
@@ -84,12 +84,86 @@ function updatePkg()
 {
   setupRoot
 
-  queueTotal=$#
+  if [ $# -eq 0 ]
+  then
+    unset targets
 
-  for target in "$@"
+    if [ $APP_TOTAL -eq 0 ]
+    then
+      fatal "no apps are available to update"
+    fi
+
+    for appname in "$APIUM_ROOT/.appdata/"*"/meta"
+    do
+      appname="${appname%'/meta'}" appname="${appname##*'/'}"
+
+      targets+=("$appname")
+    done
+  else
+    targets=($@)
+    queueTotal=$#
+  fi
+
+  for target in "${targets[@]}"
   do
-    UPDATE_APP=true installApp "$target"
+    if appExists "$target"
+    then
+      updateApp "$target"
+    elif [ -f "$target" ] && validPkg "$target"
+    then
+      UPDATE_APP=true installApp "$target"
+    else
+      fatal "$target:" "target does not match an installed app or package"
+    fi
   done
+}
+
+function updateApp()
+{
+  appname="$1"
+
+  if [ ! "$REMOTE_UPDATED" == true ]
+  then
+    remoteUpdate
+  fi
+
+  if ! appExists "$1"
+  then
+    fatal "$appname:" "cannot update app as it is not installed"
+  fi
+
+  if [ ! -f "$cacheDir/$appname.remote" ]
+  then
+    fatal "$appname:" "app does not have a remote - you must update it manually"
+  fi
+
+  # source the remote
+  . "$cacheDir/$appname.remote"
+  # source app meta
+  appSource "$appname"
+
+  if [ -z "$latest" ]
+  then
+    # assume last version is latest
+    latest="${versions[@]: -1}"
+  fi
+
+  if [ -z "${pkgrelease[$latest]}" ]
+  then
+    fatal "$latest:" "specified latest version is not available"
+  fi
+
+  if [ ! "$latest" == "$version" ]
+  then
+    makeTmp "$name-update-$latest"
+    # save our package
+    curl -Lso "$tmpfile" "${pkgrelease[$latest]}"
+    UPDATE_APP=true installApp "$tmpfile"
+  fi
+
+  unset pkgrelease \
+        versions \
+        latest
 }
 
 function uninstallApp()
@@ -121,6 +195,8 @@ function addPkg()
   setupRoot
 
   queueTotal=$#
+
+  ask "Installing $queueTotal new app(s), continue?"
 
   for target in "$@"
   do

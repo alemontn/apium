@@ -6,7 +6,7 @@ extmeta "list" "list apps" "targets-opt"
 
 function list()
 {
-  if ! ls &>/dev/null -d "$APIUM_ROOT/.appdata/"*"/meta"
+  if [ $APP_TOTAL -eq 0 ]
   then
     return 0
   fi
